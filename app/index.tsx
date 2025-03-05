@@ -1,40 +1,32 @@
 import { StatusBar } from "expo-status-bar";
 import { useEffect, useState } from "react";
-import { StyleSheet, Text, View, TouchableOpacity, ImageBackground } from "react-native";
+import {
+  StyleSheet,
+  Text,
+  View,
+  TouchableOpacity,
+  ImageBackground,
+} from "react-native";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import * as Speech from "expo-speech";
-import { setupDatabase, getPhrases, insertPhrases, toggleFavorite } from "../database";
-import { Phrase } from "../types";
 import { Link } from "expo-router";
+import { usePhraseStore } from "../store";
 
 export default function App() {
-  const [phrases, setPhrases] = useState<Phrase[]>([]);
+  const phrases = usePhraseStore((state) => state.phrases);
+  const loading = usePhraseStore((state) => state.loading);
+  const loadPhrases = usePhraseStore((state) => state.loadPhrases);
+  const toggleFavoritePhrase = usePhraseStore(
+    (state) => state.toggleFavoritePhrase
+  );
   const [currentIndex, setCurrentIndex] = useState(0);
   const [play, setPlay] = useState(false);
-    const [loading, setLoading] = useState(true);
 
-    
-  
   useEffect(() => {
-    const loadData = async () => {
-      try {
-        await setupDatabase();
-        await insertPhrases();
-        const data = await getPhrases();
-        if (data.length > 0) {
-          setPhrases(data);
-          console.log(JSON.stringify(data, null, 2));
-        }
-      } catch (error) {
-        console.error("Error loading data:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    loadData();
+    loadPhrases();
   }, []);
 
-  const phrase = !loading && phrases[currentIndex] || {
+  const phrase = (!loading && phrases[currentIndex]) || {
     id: 0,
     korean: "로딩 중...", // "Loading..."
     romanization: "",
@@ -67,17 +59,11 @@ export default function App() {
     setCurrentIndex((prevIndex) => (prevIndex + 1) % phrases.length);
   };
 
-  const addToFavorite = async () => {
-    await toggleFavorite(phrase.id);
-    setPhrases((prevPhrases) =>
-      prevPhrases.map((p) =>
-        p.id === phrase.id ? { ...p, favorite: p.favorite ? 0 : 1 } : p
-      )
-    );
-  };
-
   return (
-    <ImageBackground source={require("./assets/hanji-bg.png")} style={styles.container}>
+    <ImageBackground
+      source={require("./assets/hanji-bg.png")}
+      style={styles.container}
+    >
       <Text style={styles.header}>🟠 하루말 (HaruMal)</Text>
 
       <View style={styles.card}>
@@ -87,8 +73,17 @@ export default function App() {
       </View>
 
       <View style={styles.buttonGroup}>
-        <TouchableOpacity style={styles.button} onPress={addToFavorite}>
-          <Icon name={phrase.favorite ? "favorite" : "favorite-outline"} size={30} color="white" />
+        <TouchableOpacity
+          style={styles.button}
+          onPress={() => {
+            toggleFavoritePhrase(phrase.id);
+          }}
+        >
+          <Icon
+            name={phrase.favorite ? "favorite" : "favorite-outline"}
+            size={30}
+            color="white"
+          />
         </TouchableOpacity>
         <TouchableOpacity style={styles.speakButton} onPress={toggleSpeech}>
           <Icon name={play ? "pause" : "play-arrow"} size={50} color="white" />
@@ -98,14 +93,13 @@ export default function App() {
         </TouchableOpacity>
       </View>
 
-      <Link href="/settings" style={{
-        ...styles.button,
-        position: "absolute",
-        bottom: 20,
-        right: 20,
-      }}>
-          <Icon name="favorite" size={38} color="white" />
-        </Link>
+      <View style={{ position: "absolute", bottom: 20, right: 20 }}>
+        <TouchableOpacity style={styles.button}>
+          <Link href="/favorites">
+            <Icon name="favorite" size={38} color="white" />
+          </Link>
+        </TouchableOpacity>
+      </View>
 
       <StatusBar style="auto" />
     </ImageBackground>
