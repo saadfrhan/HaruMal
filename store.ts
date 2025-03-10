@@ -27,50 +27,68 @@ export const usePhraseStore = create<PhraseStore>((set) => ({
 
   // Load all phrases
   loadPhrases: async () => {
-    set({ loading: true });
-    const phrases = await getPhrases();
-    if (phrases.length === 0) {
-      await setupDatabase();
+    try {
       set({ loading: true });
-      set({ phrases: await getPhrases() });
+      await setupDatabase();
+      const phrases = await getPhrases();
+      set({ phrases, loading: false });
+    } catch (error) {
+      console.error("Failed to load phrases:", error);
+      set({ loading: false });
     }
-    set({ phrases, loading: false });
   },
 
   // Load favorite phrases
   loadFavorites: async () => {
-    set({ loading: true });
-    const favoritePhrases = await getFavoritePhrases();
-    set({ favoritePhrases, loading: false });
+    try {
+      set({ loading: true });
+      const favoritePhrases = await getFavoritePhrases();
+      set({ favoritePhrases, loading: false });
+    } catch (error) {
+      console.error("Failed to load favorite phrases:", error);
+      set({ loading: false });
+    }
   },
 
   // Toggle favorite status
   toggleFavoritePhrase: async (phraseId) => {
-    set((state) => ({
-      phrases: state.phrases.map((p) =>
-        p.id === phraseId ? { ...p, favorite: p.favorite === 0 ? 1 : 0 } : p
-      ),
-      favoritePhrases: state.favoritePhrases.some((p) => p.id === phraseId)
-        ? state.favoritePhrases.filter((p) => p.id !== phraseId)
-        : [
-            ...state.favoritePhrases,
-            state.phrases.find((p) => p.id === phraseId)!,
-          ],
-    }));
-    await toggleFavorite(phraseId);
+    try {
+      set((state) => ({
+        phrases: state.phrases.map((p) =>
+          p.id === phraseId ? { ...p, favorite: p.favorite === 0 ? 1 : 0 } : p
+        ),
+        favoritePhrases: state.favoritePhrases.some((p) => p.id === phraseId)
+          ? state.favoritePhrases.filter((p) => p.id !== phraseId)
+          : [
+              ...state.favoritePhrases,
+              state.phrases.find((p) => p.id === phraseId)!,
+            ],
+      }));
+      await toggleFavorite(phraseId);
+    } catch (error) {
+      console.error("Failed to toggle favorite phrase:", error);
+    }
   },
 
   // Remove from favorites
   removeFavoritePhrase: async (phraseId) => {
-    await removeFavorite(phraseId);
-    set((state) => ({
-      favoritePhrases: state.favoritePhrases.filter((p) => p.id !== phraseId),
-    }));
+    try {
+      await removeFavorite(phraseId);
+      set((state) => ({
+        favoritePhrases: state.favoritePhrases.filter((p) => p.id !== phraseId),
+      }));
+    } catch (error) {
+      console.error("Failed to remove favorite phrase:", error);
+    }
   },
 
   // Remove all favorites
   clearAllFavorites: async () => {
-    await removeAllFavorites();
-    set({ favoritePhrases: [] });
+    try {
+      await removeAllFavorites();
+      set({ favoritePhrases: [] });
+    } catch (error) {
+      console.error("Failed to clear all favorite phrases:", error);
+    }
   },
 }));
